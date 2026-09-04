@@ -11,7 +11,7 @@ import { WorkforceRegistry } from './registry.mjs'
 import { TimeGateRegistry } from './scheduling.mjs'
 
 export function createDefaultRegistry({ directory = null, assetRegistry = null } = {}) {
-  const registry = new WorkforceRegistry()
+  const registry = new WorkforceRegistry({ assetRegistry })
   registry.registerOrganization({ organizationId: 'workforceos', name: 'WorkforceOS', status: 'active' })
   registry.registerFloor({ floorId: 'ground-floor', organizationId: 'workforceos', name: 'Ground Floor', rank: 0 })
   registry.registerFloor({ floorId: 'social-tier', organizationId: 'workforceos', name: 'Social Tier', rank: 1 })
