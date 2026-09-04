@@ -7,6 +7,7 @@ import { scanThreads } from './scan.mjs'
 import { createWorkforceApi } from './workforce/http.mjs'
 import {
   workforceActionEngine,
+  workforceAssetRegistry,
   workforceCoordinator,
   workforceHandoffs,
   workforceLogger,
@@ -24,6 +25,7 @@ const HOST = process.env.BOT_CROSSING_HOST || '127.0.0.1'
 const workforceApi = createWorkforceApi({
   scanThreads,
   registry: workforceRegistry,
+  assetRegistry: workforceAssetRegistry,
   actionEngine: workforceActionEngine,
   coordinator: workforceCoordinator,
   timeGates: workforceTimeGates,
