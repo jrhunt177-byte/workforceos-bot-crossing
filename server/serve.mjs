@@ -6,6 +6,7 @@ import { apiMiddleware } from './api.mjs'
 import { scanThreads } from './scan.mjs'
 import { createWorkforceApi } from './workforce/http.mjs'
 import { initializePostgresPersistence } from './workforce/postgres-bootstrap.mjs'
+import { enforceProductionReleaseGate } from './workforce/release-gate.mjs'
 import {
   workforceActionEngine,
   workforceAssetRegistry,
@@ -24,6 +25,11 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(here, '..', 'dist')
 const PORT = Number(process.env.PORT) || 5274
 const HOST = process.env.BOT_CROSSING_HOST || '127.0.0.1'
+
+// Development and staged hosted acceptance remain unchanged unless production release is
+// explicitly requested. Once requested, startup fails closed if a required persistence or
+// security control is missing rather than accidentally publishing a partially protected control plane.
+enforceProductionReleaseGate(process.env)
 
 const workforcePersistenceRuntime = await initializePostgresPersistence({
   env: process.env,
