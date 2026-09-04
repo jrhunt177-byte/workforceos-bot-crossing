@@ -28,12 +28,12 @@ export class OperationsLoop {
       this.lastResult = structuredClone(result)
       this.lastError = null
       this.lastCompletedAt = Date.now()
-      this.onResult?.(structuredClone(result))
+      if (this.onResult) await this.onResult(structuredClone(result))
       return result
     } catch (error) {
       this.lastError = String(error?.message || error)
       this.lastCompletedAt = Date.now()
-      this.onError?.(error)
+      if (this.onError) await this.onError(error)
       throw error
     } finally {
       this.inFlight = false
