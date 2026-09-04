@@ -19,6 +19,7 @@ export const statusLabel = (status = 'unknown') =>
 export function summarizeSnapshot(snapshot = {}) {
   const agents = Array.isArray(snapshot.agents) ? snapshot.agents : []
   const attention = Array.isArray(snapshot.attention) ? snapshot.attention : []
+  const assets = Array.isArray(snapshot.assets) ? snapshot.assets : []
   return {
     totalAgents: agents.length,
     working: agents.filter((agent) => agent.visibleStatus === 'working').length,
@@ -26,6 +27,8 @@ export function summarizeSnapshot(snapshot = {}) {
     attention: attention.length,
     offline: agents.filter((agent) => agent.health === 'offline').length,
     sources: new Set(agents.map((agent) => agent.sourceType).filter(Boolean)).size,
+    assets: assets.length,
+    operationalAssets: assets.filter((asset) => ['DEPLOYED', 'OPERATIONAL'].includes(asset.status)).length,
   }
 }
 
@@ -33,6 +36,26 @@ export function sortAgents(agents = []) {
   return [...agents].sort((a, b) => {
     const rankA = STATUS_ORDER.get(a.visibleStatus) ?? 99
     const rankB = STATUS_ORDER.get(b.visibleStatus) ?? 99
+    if (rankA !== rankB) return rankA - rankB
+    return String(a.name || '').localeCompare(String(b.name || ''))
+  })
+}
+
+export function sortAssets(assets = []) {
+  const statusOrder = new Map([
+    ['BLOCKED', 0],
+    ['PARTIAL', 1],
+    ['DEPLOYED', 2],
+    ['OPERATIONAL', 3],
+    ['TESTED', 4],
+    ['BUILT', 5],
+    ['DESIGNED', 6],
+    ['CONTROLLING', 7],
+    ['SUPERSEDED', 8],
+  ])
+  return [...assets].sort((a, b) => {
+    const rankA = statusOrder.get(a.status) ?? 99
+    const rankB = statusOrder.get(b.status) ?? 99
     if (rankA !== rankB) return rankA - rankB
     return String(a.name || '').localeCompare(String(b.name || ''))
   })
