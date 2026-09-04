@@ -37,6 +37,15 @@ test('attention-worthy agents sort before routine workers', () => {
   assert.deepEqual(sorted.map((agent) => agent.name), ['Critical', 'Blocked', 'Idle'])
 })
 
+test('offline workers surface before routine activity according to canonical precedence', () => {
+  const sorted = sortAgents([
+    { name: 'Idle', visibleStatus: 'idle' },
+    { name: 'Working', visibleStatus: 'working' },
+    { name: 'Offline', visibleStatus: 'offline' },
+  ])
+  assert.deepEqual(sorted.map((agent) => agent.name), ['Offline', 'Working', 'Idle'])
+})
+
 test('assets prioritize blocked and incomplete records before routine operational assets', () => {
   const sorted = sortAssets([
     { name: 'Operational', status: 'OPERATIONAL' },
