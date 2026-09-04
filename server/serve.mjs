@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url'
 import { apiMiddleware } from './api.mjs'
 import { scanThreads } from './scan.mjs'
 import { createWorkforceApi } from './workforce/http.mjs'
+import { initializePostgresPersistence } from './workforce/postgres-bootstrap.mjs'
 import {
   workforceActionEngine,
   workforceAssetRegistry,
   workforceCoordinator,
+  workforceDirectory,
   workforceHandoffs,
   workforceLogger,
   workforceMetrics,
@@ -22,15 +24,36 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(here, '..', 'dist')
 const PORT = Number(process.env.PORT) || 5274
 const HOST = process.env.BOT_CROSSING_HOST || '127.0.0.1'
+
+const workforcePersistenceRuntime = await initializePostgresPersistence({
+  env: process.env,
+  registry: workforceRegistry,
+  actionEngine: workforceActionEngine,
+  timeGates: workforceTimeGates,
+  handoffs: workforceHandoffs,
+  assetRegistry: workforceAssetRegistry,
+  directory: workforceDirectory,
+})
+const workforcePersistence = workforcePersistenceRuntime?.controller || null
+
+if (workforcePersistence) {
+  workforceOperationsLoop.onResult = async () => {
+    for (const entry of workforceActionEngine.listAudit()) {
+      await workforcePersistence.persistAudit(entry)
+    }
+    await workforcePersistence.save()
+  }
+}
+
 const workforceApi = createWorkforceApi({
   scanThreads,
   registry: workforceRegistry,
-  assetRegistry: workforceAssetRegistry,
   actionEngine: workforceActionEngine,
   coordinator: workforceCoordinator,
   timeGates: workforceTimeGates,
   handoffs: workforceHandoffs,
   operationsLoop: workforceOperationsLoop,
+  persistence: workforcePersistence,
   ingestionToken: process.env.WORKFORCEOS_INGEST_TOKEN || '',
   viewerToken: process.env.WORKFORCEOS_VIEWER_TOKEN || '',
   controlToken: process.env.WORKFORCEOS_CONTROL_TOKEN || '',
@@ -51,6 +74,9 @@ const workforceApi = createWorkforceApi({
 })
 
 if (process.env.WORKFORCEOS_ENABLE_OPERATIONS_LOOP === '1') {
+  if (!workforcePersistence) {
+    throw new Error('WORKFORCEOS_ENABLE_OPERATIONS_LOOP=1 requires durable PostgreSQL persistence')
+  }
   workforceOperationsLoop.start()
 }
 
@@ -110,3 +136,21 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, () => {
   console.log(`Bot Crossing + WorkforceOS → http://${HOST}:${PORT}`)
 })
+
+let closing = false
+async function shutdown(signal) {
+  if (closing) return
+  closing = true
+  workforceOperationsLoop.stop()
+  if (workforcePersistence) {
+    await workforcePersistence.save().catch((error) => {
+      workforceLogger.error?.('workforce.persistence.shutdown_save_failed', { error: String(error?.message || error) })
+    })
+  }
+  await new Promise((resolve) => server.close(resolve))
+  await workforcePersistenceRuntime?.close?.().catch(() => {})
+  if (signal) process.exit(0)
+}
+
+process.once('SIGTERM', () => { shutdown('SIGTERM').catch(() => process.exit(1)) })
+process.once('SIGINT', () => { shutdown('SIGINT').catch(() => process.exit(1)) })
