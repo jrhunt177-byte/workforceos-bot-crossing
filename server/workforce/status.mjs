@@ -14,11 +14,11 @@ export function deriveVisibleStatus(state) {
   if (attention === ATTENTION.CRITICAL) return ATTENTION.CRITICAL
   if (attention === ATTENTION.APPROVAL_REQUIRED) return ATTENTION.APPROVAL_REQUIRED
   if (attention === ATTENTION.BLOCKED) return ATTENTION.BLOCKED
+  if (health === HEALTH.OFFLINE) return HEALTH.OFFLINE
   if (activity === ACTIVITY.WORKING) return ACTIVITY.WORKING
   if (activity === ACTIVITY.REVIEW_READY) return ACTIVITY.REVIEW_READY
   if (activity === ACTIVITY.SCHEDULED) return ACTIVITY.SCHEDULED
   if (activity === ACTIVITY.PAUSED) return ACTIVITY.PAUSED
   if (activity === ACTIVITY.IDLE) return ACTIVITY.IDLE
-  if (health === HEALTH.OFFLINE) return HEALTH.OFFLINE
   return HEALTH.UNKNOWN
 }
