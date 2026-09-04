@@ -3,11 +3,19 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { apiMiddleware } from './api.mjs'
+import { scanThreads } from './scan.mjs'
+import { createWorkforceApi } from './workforce/http.mjs'
+import { workforceRegistry } from './workforce/runtime.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(here, '..', 'dist')
 const PORT = Number(process.env.PORT) || 5274
 const HOST = process.env.BOT_CROSSING_HOST || '127.0.0.1'
+const workforceApi = createWorkforceApi({
+  scanThreads,
+  registry: workforceRegistry,
+  ingestionToken: process.env.WORKFORCEOS_INGEST_TOKEN || '',
+})
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -29,6 +37,10 @@ function resolveInDist(pathname) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost')
+
+  if (url.pathname.startsWith('/api/workforce/')) {
+    return workforceApi(req, res, null)
+  }
 
   if (url.pathname.startsWith('/api/')) {
     return apiMiddleware(req, res, null)
@@ -59,5 +71,5 @@ const server = http.createServer(async (req, res) => {
 })
 
 server.listen(PORT, HOST, () => {
-  console.log(`Bot Crossing → http://${HOST}:${PORT}`)
+  console.log(`Bot Crossing + WorkforceOS → http://${HOST}:${PORT}`)
 })
