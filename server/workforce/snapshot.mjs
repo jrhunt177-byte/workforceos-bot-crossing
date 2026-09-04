@@ -20,6 +20,7 @@ export function buildCombinedSnapshot({ threads = [], registrySnapshot = null, l
     departments: [],
     agents: [],
     workItems: [],
+    assets: [],
     attention: [],
     eventCount: 0,
   }
@@ -54,6 +55,7 @@ export function buildCombinedSnapshot({ threads = [], registrySnapshot = null, l
     departments: uniqBy([...native.departments, ...legacyDepartments], 'departmentId'),
     agents,
     workItems,
+    assets: Array.isArray(native.assets) ? native.assets : [],
     attention: agents.filter((agent) => !['none', 'info'].includes(agent.attention)),
     sources: [...new Set(agents.map((agent) => agent.sourceType))].sort(),
     eventCount: Number(native.eventCount) || 0,
