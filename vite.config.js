@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 import { apiMiddleware } from './server/api.mjs'
 import { scanThreads } from './server/scan.mjs'
 import { createWorkforceApi } from './server/workforce/http.mjs'
-import { workforceRegistry } from './server/workforce/runtime.mjs'
+import { workforceActionEngine, workforceRegistry } from './server/workforce/runtime.mjs'
 
 /** Serves both legacy Bot Crossing APIs and the additive WorkforceOS control-plane API. */
 const api = () => ({
@@ -12,7 +12,10 @@ const api = () => ({
     const workforceApi = createWorkforceApi({
       scanThreads,
       registry: workforceRegistry,
+      actionEngine: workforceActionEngine,
       ingestionToken: process.env.WORKFORCEOS_INGEST_TOKEN || '',
+      controlToken: process.env.WORKFORCEOS_CONTROL_TOKEN || '',
+      chairmanToken: process.env.WORKFORCEOS_CHAIRMAN_TOKEN || '',
     })
     server.middlewares.use(workforceApi)
     server.middlewares.use(apiMiddleware)
