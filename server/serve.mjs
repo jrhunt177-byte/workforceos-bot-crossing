@@ -9,7 +9,10 @@ import {
   workforceActionEngine,
   workforceCoordinator,
   workforceHandoffs,
+  workforceLogger,
+  workforceMetrics,
   workforceOperationsLoop,
+  workforceRateLimiter,
   workforceRegistry,
   workforceTimeGates,
 } from './workforce/runtime.mjs'
@@ -27,8 +30,22 @@ const workforceApi = createWorkforceApi({
   handoffs: workforceHandoffs,
   operationsLoop: workforceOperationsLoop,
   ingestionToken: process.env.WORKFORCEOS_INGEST_TOKEN || '',
+  viewerToken: process.env.WORKFORCEOS_VIEWER_TOKEN || '',
   controlToken: process.env.WORKFORCEOS_CONTROL_TOKEN || '',
   chairmanToken: process.env.WORKFORCEOS_CHAIRMAN_TOKEN || '',
+  sessionSecret: process.env.WORKFORCEOS_SESSION_SECRET || '',
+  loginSecrets: {
+    viewer: process.env.WORKFORCEOS_VIEWER_SECRET || '',
+    operator: process.env.WORKFORCEOS_OPERATOR_SECRET || '',
+    chairman: process.env.WORKFORCEOS_CHAIRMAN_SECRET || '',
+  },
+  secureCookies: process.env.WORKFORCEOS_SECURE_COOKIES === '1',
+  requireReadAuth: process.env.WORKFORCEOS_REQUIRE_READ_AUTH === '1',
+  eventSigningSecret: process.env.WORKFORCEOS_EVENT_SIGNING_SECRET || '',
+  requireSignedEvents: process.env.WORKFORCEOS_REQUIRE_SIGNED_EVENTS === '1',
+  rateLimiter: workforceRateLimiter,
+  metrics: workforceMetrics,
+  logger: workforceLogger,
 })
 
 if (process.env.WORKFORCEOS_ENABLE_OPERATIONS_LOOP === '1') {
