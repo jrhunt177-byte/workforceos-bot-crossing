@@ -1,6 +1,10 @@
 import { WorkforceActionEngine } from './action-engine.mjs'
 import runtimeAdapter from './adapters/workforce-runtime.mjs'
+import { OperationsCoordinator } from './coordinator.mjs'
+import { HandoffLedger } from './handoffs.mjs'
+import { OperationsLoop } from './operations-loop.mjs'
 import { WorkforceRegistry } from './registry.mjs'
+import { TimeGateRegistry } from './scheduling.mjs'
 
 export function createDefaultRegistry() {
   const registry = new WorkforceRegistry()
@@ -23,4 +27,16 @@ export const workforceRegistry = createDefaultRegistry()
 export const workforceActionEngine = new WorkforceActionEngine({
   registry: workforceRegistry,
   adapters: [runtimeAdapter],
+})
+export const workforceTimeGates = new TimeGateRegistry()
+export const workforceHandoffs = new HandoffLedger()
+export const workforceCoordinator = new OperationsCoordinator({
+  registry: workforceRegistry,
+  actionEngine: workforceActionEngine,
+  timeGates: workforceTimeGates,
+  handoffs: workforceHandoffs,
+})
+export const workforceOperationsLoop = new OperationsLoop({
+  coordinator: workforceCoordinator,
+  intervalMs: 60_000,
 })
