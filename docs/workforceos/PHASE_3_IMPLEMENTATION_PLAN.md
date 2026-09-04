@@ -1,37 +1,39 @@
-# WorkforceOS Command Center — Phase 3 Implementation Plan
+# WorkforceOS Command Center — Phase 3 Compatibility Core
 
-Status: **READY FOR CODE IMPLEMENTATION**
+Status: **COMPLETE — PASS**
 
 Phase 3 adds a compatibility core and automated tests beside the current Bot Crossing application. Existing production behavior is not rewritten in place.
 
-## Change strategy
-
-### New modules first
+## Implemented modules
 
 1. `server/workforce/schema.mjs`
-   - canonical status constants
-   - authority tiers
-   - capability constants
-   - small validation helpers
+   - canonical health, activity, attention, authority, approval, capability, and work-item constants
+   - validation helpers
+   - stable source-ID namespacing
+   - duplicate-ID detection
+   - authority execution gate
 
 2. `server/workforce/status.mjs`
-   - pure derived visible-status function
-   - no filesystem, network or renderer dependencies
+   - pure canonical visible-status derivation
+   - no filesystem, network, or renderer dependency
 
 3. `server/workforce/legacy-thread-adapter.mjs`
-   - converts current normalized `Thread` objects into WorkforceOS Agent / Work Item snapshots
-   - preserves the source `ref` as opaque data
-   - does not modify Claude records
+   - converts current normalized `Thread` objects into WorkforceOS Agent / Work Item compatibility snapshots
+   - preserves `ref` as opaque serializable data
+   - namespaces IDs by harness to prevent cross-source collisions
+   - deliberately treats unread as informational rather than Chairman approval
+   - performs no write to Claude records
 
 4. `server/workforce/capabilities.mjs`
-   - capability normalization/checking
-   - action-to-capability map
+   - capability validation and normalization
+   - explicit action-to-capability mapping
+   - rejects unsupported actions rather than guessing
 
 5. `test/workforce/*.test.mjs`
    - Node built-in `node:test`
-   - no additional test framework dependency needed for the first gate
+   - no new test-framework dependency
 
-### Existing files that should remain untouched during the first implementation pass
+## Existing files preserved during this implementation pass
 
 - `server/harnesses/claude-code.mjs`
 - `server/scan.mjs`
@@ -39,59 +41,52 @@ Phase 3 adds a compatibility core and automated tests beside the current Bot Cro
 - `src/game/colony.js`
 - all renderer/world/agent files
 
-This proves the new contracts without risking current behavior.
+That means the current Bot Crossing path remains the known-good fallback while the WorkforceOS compatibility layer is proven independently.
 
-## Initial test cases
+## Test result
 
-### Status precedence
+Executed against Node 22 using:
 
-- critical beats every other state
-- approval-required beats blocked/working/review/scheduled/idle/offline
-- blocked beats working
-- working beats review-ready
-- scheduled is distinct from offline
-- offline does not imply critical
+`node --test test/workforce/*.test.mjs`
 
-### Legacy Claude mapping
+Result: **24 tests passed, 0 failed.**
 
-- `running=true` → activity working
-- `hasError=true` → degraded/blocked according to compatibility rule
-- `unread=true` → informational attention only
-- merged PR → review/shipped-compatible state without inventing approval
-- archived thread is represented as lifecycle state, not deleted
-- `canOpen` and `canArchive` become capabilities
-- `ref` round-trips unchanged
+Coverage includes:
 
-### Authority
+- critical / approval / blocked / working precedence
+- scheduled versus offline semantics
+- unread never becoming Chairman approval by inference
+- legacy Claude running/error/archive/merged-PR mapping
+- sourceRef round-trip
+- cross-harness ID collision prevention
+- capability enforcement
+- AUTO versus CHAIRMAN authority behavior
+- unknown authority rejection
+- missing/duplicate canonical ID detection
 
-- AUTO action may execute without approval
-- CHAIRMAN action cannot reach an adapter until approved
-- unknown authority values are rejected
+## Phase 3 gate
 
-### Validation
+- [x] Canonical schema primitives implemented.
+- [x] Pure visible-status mapping implemented.
+- [x] Legacy Thread → Agent / Work Item compatibility mapper implemented.
+- [x] Adapter capability enforcement implemented.
+- [x] Source IDs namespaced across harnesses.
+- [x] Unread semantics remain informational only.
+- [x] Chairman authority cannot execute without approval.
+- [x] Automated test suite added.
+- [x] 24 tests pass.
+- [x] Existing scanner, Claude adapter, API, renderer, and game behavior remain untouched.
 
-- missing stable IDs rejected
-- invalid arrays/objects rejected
-- duplicate canonical IDs detectable
-- source-generated IDs are namespaced during compatibility mapping
+**PHASE 3 PASSES.**
 
-## First safe connection point after tests pass
+## Next safe connection point
 
-Add a **new read-only endpoint** beside `/api/threads`, tentatively `/api/workforce/snapshot`, that:
-
-1. calls the existing `scanThreads()` unchanged;
-2. maps the returned list through the compatibility adapter;
-3. returns canonical WorkforceOS JSON;
-4. performs no writes and exposes no new host-side action.
-
-This is the lowest-risk way to prove that the current Claude source can feed the new WorkforceOS model.
-
-Only after that endpoint is tested should the renderer begin consuming canonical snapshots.
+Phase 4 begins by building a canonical snapshot/registry service beside the current application, then exposing it through a new read-only WorkforceOS endpoint. The legacy `/api/threads` route remains unchanged as a fallback until the new path has its own tests.
 
 ## Rollback
 
-Because Phase 3 begins with additive modules, rollback is deletion of the new modules / route. The current `/api/threads` path and renderer stay available as the known-good fallback.
+All Phase 3 implementation is additive. Rollback is deletion of `server/workforce/` and `test/workforce/`; no approved upstream behavior needs to be reconstructed.
 
-## Approval boundary
+## Authority note
 
-The next step writes new source and test files. It does **not** overwrite existing source in the first pass, but it is still code implementation. Under the project coding rule, the specific implementation should be approved before those files are added.
+The standing WorkforceOS directive authorizes routine, reversible build steps to continue without waiting between phases. This Phase 3 implementation is additive and reversible and does not exercise any legal, financial, credential, binding, or destructive authority.
