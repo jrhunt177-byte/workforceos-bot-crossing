@@ -1,6 +1,8 @@
 import { WorkforceActionEngine } from './action-engine.mjs'
 import runtimeAdapter from './adapters/workforce-runtime.mjs'
+import { WorkforceAssetRegistry } from './asset-registry.mjs'
 import { OperationsCoordinator } from './coordinator.mjs'
+import { applyWorkforceDirectory, loadWorkforceDirectoryFromEnv } from './directory.mjs'
 import { HandoffLedger } from './handoffs.mjs'
 import { WorkforceMetrics, createStructuredLogger } from './observability.mjs'
 import { OperationsLoop } from './operations-loop.mjs'
@@ -8,7 +10,7 @@ import { WorkforceRateLimiter } from './rate-limit.mjs'
 import { WorkforceRegistry } from './registry.mjs'
 import { TimeGateRegistry } from './scheduling.mjs'
 
-export function createDefaultRegistry() {
+export function createDefaultRegistry({ directory = null, assetRegistry = null } = {}) {
   const registry = new WorkforceRegistry()
   registry.registerOrganization({ organizationId: 'workforceos', name: 'WorkforceOS', status: 'active' })
   registry.registerFloor({ floorId: 'ground-floor', organizationId: 'workforceos', name: 'Ground Floor', rank: 0 })
@@ -22,10 +24,16 @@ export function createDefaultRegistry() {
     purpose: 'Native WorkforceOS agents and runtime workers',
     displayOrder: 1,
   })
+  if (directory) applyWorkforceDirectory({ registry, assetRegistry, directory })
   return registry
 }
 
-export const workforceRegistry = createDefaultRegistry()
+export const workforceDirectory = loadWorkforceDirectoryFromEnv()
+export const workforceAssetRegistry = new WorkforceAssetRegistry()
+export const workforceRegistry = createDefaultRegistry({
+  directory: workforceDirectory,
+  assetRegistry: workforceAssetRegistry,
+})
 export const workforceActionEngine = new WorkforceActionEngine({
   registry: workforceRegistry,
   adapters: [runtimeAdapter],
