@@ -143,11 +143,12 @@ function renderRoster(overlay, snapshot) {
 
 function renderAssetRegistry(overlay, snapshot) {
   const assets = sortAssets(snapshot?.assets || [])
+  const protectedCount = assets.filter((asset) => asset?.preservation?.minimumComplete === true).length
   const panel = element('section', 'panel')
   const heading = element('div', 'panel-heading')
   const left = element('div')
   left.append(element('p', 'eyebrow', 'Ownership and recovery'), element('h2', '', 'WorkforceOS Asset Registry'))
-  heading.append(left, element('span', 'panel-count', `${assets.length} registered`))
+  heading.append(left, element('span', 'panel-count', `${protectedCount}/${assets.length} preservation-complete`))
   panel.append(heading)
 
   const grid = element('div', 'agent-grid')
