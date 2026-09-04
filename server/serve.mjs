@@ -5,7 +5,14 @@ import { fileURLToPath } from 'node:url'
 import { apiMiddleware } from './api.mjs'
 import { scanThreads } from './scan.mjs'
 import { createWorkforceApi } from './workforce/http.mjs'
-import { workforceActionEngine, workforceRegistry } from './workforce/runtime.mjs'
+import {
+  workforceActionEngine,
+  workforceCoordinator,
+  workforceHandoffs,
+  workforceOperationsLoop,
+  workforceRegistry,
+  workforceTimeGates,
+} from './workforce/runtime.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(here, '..', 'dist')
@@ -15,10 +22,18 @@ const workforceApi = createWorkforceApi({
   scanThreads,
   registry: workforceRegistry,
   actionEngine: workforceActionEngine,
+  coordinator: workforceCoordinator,
+  timeGates: workforceTimeGates,
+  handoffs: workforceHandoffs,
+  operationsLoop: workforceOperationsLoop,
   ingestionToken: process.env.WORKFORCEOS_INGEST_TOKEN || '',
   controlToken: process.env.WORKFORCEOS_CONTROL_TOKEN || '',
   chairmanToken: process.env.WORKFORCEOS_CHAIRMAN_TOKEN || '',
 })
+
+if (process.env.WORKFORCEOS_ENABLE_OPERATIONS_LOOP === '1') {
+  workforceOperationsLoop.start()
+}
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
