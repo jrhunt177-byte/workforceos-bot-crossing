@@ -23,13 +23,13 @@ export function createAccessController({
     if (session) return { ...session, actor: `session:${session.role}` }
     const authorization = req?.headers?.authorization
     if (verifyBearerToken(authorization, chairmanToken)) {
-      return { type: 'bearer', role: WORKFORCE_ROLE.CHAIRMAN, actor: 'bearer:chairman' }
+      return { type: 'bearer', role: WORKFORCE_ROLE.CHAIRMAN, actor: 'chairman-token' }
     }
     if (verifyBearerToken(authorization, controlToken)) {
-      return { type: 'bearer', role: WORKFORCE_ROLE.OPERATOR, actor: 'bearer:operator' }
+      return { type: 'bearer', role: WORKFORCE_ROLE.OPERATOR, actor: 'workforce-control-token' }
     }
     if (verifyBearerToken(authorization, viewerToken)) {
-      return { type: 'bearer', role: WORKFORCE_ROLE.VIEWER, actor: 'bearer:viewer' }
+      return { type: 'bearer', role: WORKFORCE_ROLE.VIEWER, actor: 'workforce-viewer-token' }
     }
     return null
   }
