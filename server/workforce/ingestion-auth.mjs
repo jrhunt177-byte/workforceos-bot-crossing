@@ -15,11 +15,15 @@ export function verifyBearerToken(authorization, expectedToken) {
   return safeEqual(match[1], expectedToken)
 }
 
-export function requireIngestionToken(authorization, expectedToken) {
+export function requireBearerToken(authorization, expectedToken, label = 'access') {
   if (!verifyBearerToken(authorization, expectedToken)) {
-    const err = new Error('Invalid WorkforceOS ingestion token')
+    const err = new Error(`Invalid WorkforceOS ${label} token`)
     err.statusCode = 401
     throw err
   }
   return true
+}
+
+export function requireIngestionToken(authorization, expectedToken) {
+  return requireBearerToken(authorization, expectedToken, 'ingestion')
 }
