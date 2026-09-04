@@ -16,7 +16,7 @@ import { EVENT_TYPES, eventIdempotencyKey, validateCanonicalEvent } from './even
 const clone = (value) => (value == null ? value : structuredClone(value))
 
 export class WorkforceRegistry {
-  constructor() {
+  constructor({ assetRegistry = null } = {}) {
     this.organizations = new Map()
     this.floors = new Map()
     this.departments = new Map()
@@ -24,6 +24,7 @@ export class WorkforceRegistry {
     this.workItems = new Map()
     this.events = new Map()
     this.eventKeys = new Set()
+    this.assetRegistry = assetRegistry
   }
 
   registerOrganization(organization) {
@@ -210,12 +211,16 @@ export class WorkforceRegistry {
 
   snapshot() {
     const agents = [...this.agents.values()].map(clone)
+    const assets = this.assetRegistry && typeof this.assetRegistry.list === 'function'
+      ? this.assetRegistry.list()
+      : []
     return {
       organizations: [...this.organizations.values()].map(clone),
       floors: [...this.floors.values()].sort((a, b) => a.rank - b.rank).map(clone),
       departments: [...this.departments.values()].sort((a, b) => a.displayOrder - b.displayOrder).map(clone),
       agents,
       workItems: [...this.workItems.values()].map(clone),
+      assets,
       attention: agents.filter((agent) => agent.attention !== ATTENTION.NONE && agent.attention !== ATTENTION.INFO),
       eventCount: this.events.size,
       generatedAt: Date.now(),
