@@ -2,12 +2,12 @@ const STATUS_ORDER = new Map([
   ['critical', 0],
   ['approval_required', 1],
   ['blocked', 2],
-  ['working', 3],
-  ['review_ready', 4],
-  ['scheduled', 5],
-  ['paused', 6],
-  ['idle', 7],
-  ['offline', 8],
+  ['offline', 3],
+  ['working', 4],
+  ['review_ready', 5],
+  ['scheduled', 6],
+  ['paused', 7],
+  ['idle', 8],
   ['unknown', 9],
 ])
 
