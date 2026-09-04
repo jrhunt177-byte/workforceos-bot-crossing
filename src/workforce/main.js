@@ -1,5 +1,5 @@
 import './styles.css'
-import { fetchWorkforceSnapshot } from './api.js'
+import { fetchWorkforceSession, fetchWorkforceSnapshot, loginWorkforce, logoutWorkforce } from './api.js'
 import { groupAgentsByFloor, sortAgents, statusLabel, summarizeSnapshot } from './view-model.js'
 
 const app = document.querySelector('#workforce-app')
@@ -12,6 +12,7 @@ app.innerHTML = `
       <div><strong>WorkforceOS</strong><span>Command Center</span></div>
     </div>
     <div class="connection" data-connection><span></span><b>Connecting</b></div>
+    <button class="session-button" type="button" data-session-action hidden>Sign out</button>
   </header>
   <div class="shell">
     <nav class="sidebar" data-sidebar>
@@ -36,10 +37,13 @@ const menuButton = app.querySelector('.menu-button')
 const container = app.querySelector('[data-view-container]')
 const connection = app.querySelector('[data-connection]')
 const updated = app.querySelector('[data-updated]')
+const sessionButton = app.querySelector('[data-session-action]')
 let currentView = 'overview'
 let snapshot = null
 let refreshTimer = null
 let activeController = null
+let authRequired = false
+let currentRole = null
 
 function element(tag, className, text) {
   const node = document.createElement(tag)
@@ -51,6 +55,75 @@ function element(tag, className, text) {
 function setConnection(state, label) {
   connection.className = `connection ${state}`
   connection.querySelector('b').textContent = label
+}
+
+function setSessionUi(role) {
+  currentRole = role || null
+  sessionButton.hidden = !currentRole
+  sessionButton.textContent = currentRole ? `Sign out · ${statusLabel(currentRole)}` : 'Sign out'
+}
+
+function renderLogin(message = '') {
+  const panel = element('section', 'login-panel')
+  const copy = element('div', 'login-copy')
+  copy.append(
+    element('p', 'eyebrow', 'Secure access'),
+    element('h2', '', 'Sign in to WorkforceOS'),
+    element('p', 'login-note', 'Use the access role assigned to this device. Your access secret is sent only to the WorkforceOS server and is never stored in browser storage.')
+  )
+
+  const form = element('form', 'login-form')
+  const roleLabel = element('label', 'form-field')
+  roleLabel.append(element('span', '', 'Role'))
+  const role = document.createElement('select')
+  role.name = 'role'
+  role.autocomplete = 'off'
+  for (const value of ['viewer', 'operator', 'chairman']) {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = statusLabel(value)
+    role.append(option)
+  }
+  roleLabel.append(role)
+
+  const secretLabel = element('label', 'form-field')
+  secretLabel.append(element('span', '', 'Access secret'))
+  const secret = document.createElement('input')
+  secret.type = 'password'
+  secret.name = 'secret'
+  secret.required = true
+  secret.autocomplete = 'current-password'
+  secret.spellcheck = false
+  secretLabel.append(secret)
+
+  const feedback = element('p', `login-feedback${message ? ' is-error' : ''}`, message)
+  const submit = element('button', 'login-submit', 'Sign in')
+  submit.type = 'submit'
+  form.append(roleLabel, secretLabel, feedback, submit)
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+    submit.disabled = true
+    feedback.className = 'login-feedback'
+    feedback.textContent = 'Authenticating…'
+    try {
+      const result = await loginWorkforce({ role: role.value, secret: secret.value })
+      secret.value = ''
+      authRequired = false
+      setSessionUi(result.role)
+      feedback.textContent = ''
+      await refresh()
+    } catch (error) {
+      secret.value = ''
+      feedback.className = 'login-feedback is-error'
+      feedback.textContent = error.message
+    } finally {
+      submit.disabled = false
+    }
+  })
+
+  panel.append(copy, form)
+  container.replaceChildren(panel)
 }
 
 function statusPill(agent) {
@@ -167,6 +240,7 @@ function renderFloors() {
 }
 
 function render() {
+  if (authRequired) return renderLogin()
   if (!snapshot) return
   if (currentView === 'attention') return renderAttention()
   if (currentView === 'agents') return renderAgents()
@@ -180,11 +254,21 @@ async function refresh() {
   try {
     setConnection('is-loading', 'Syncing')
     snapshot = await fetchWorkforceSnapshot({ signal: activeController.signal })
+    authRequired = false
     setConnection('is-online', 'Live')
     updated.textContent = `Updated ${new Date(snapshot.generatedAt || Date.now()).toLocaleTimeString()}`
     render()
   } catch (error) {
     if (error.name === 'AbortError') return
+    if (error.status === 401) {
+      snapshot = null
+      authRequired = true
+      setSessionUi(null)
+      setConnection('is-error', 'Locked')
+      updated.textContent = 'Authentication required'
+      renderLogin()
+      return
+    }
     setConnection('is-error', 'Disconnected')
     updated.textContent = error.message
     if (!snapshot) container.replaceChildren(element('p', 'empty-state error-state', 'The WorkforceOS API is not reachable yet. The 3D Bot Crossing view remains unchanged.'))
@@ -206,16 +290,40 @@ for (const button of app.querySelectorAll('[data-view]')) {
   })
 }
 
+sessionButton.addEventListener('click', async () => {
+  sessionButton.disabled = true
+  try {
+    await logoutWorkforce()
+  } catch {
+    // Local/public development may not have a configured session; clearing UI remains safe.
+  } finally {
+    setSessionUi(null)
+    snapshot = null
+    sessionButton.disabled = false
+    await refresh()
+  }
+})
+
 function scheduleRefresh() {
   clearInterval(refreshTimer)
   refreshTimer = setInterval(() => {
-    if (!document.hidden) refresh()
+    if (!document.hidden && !authRequired) refresh()
   }, 5000)
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) refresh()
+  if (!document.hidden && !authRequired) refresh()
 })
 
-refresh()
-scheduleRefresh()
+async function bootstrap() {
+  try {
+    const session = await fetchWorkforceSession()
+    setSessionUi(session.role)
+  } catch {
+    setSessionUi(null)
+  }
+  await refresh()
+  scheduleRefresh()
+}
+
+bootstrap()
