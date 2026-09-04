@@ -1,3 +1,5 @@
+import { WorkforceActionEngine } from './action-engine.mjs'
+import runtimeAdapter from './adapters/workforce-runtime.mjs'
 import { WorkforceRegistry } from './registry.mjs'
 
 export function createDefaultRegistry() {
@@ -18,3 +20,7 @@ export function createDefaultRegistry() {
 }
 
 export const workforceRegistry = createDefaultRegistry()
+export const workforceActionEngine = new WorkforceActionEngine({
+  registry: workforceRegistry,
+  adapters: [runtimeAdapter],
+})
