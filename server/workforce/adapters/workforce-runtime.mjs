@@ -1,7 +1,23 @@
 import { randomUUID } from 'node:crypto'
 import { defineAdapter } from '../adapter-contract.mjs'
-import { validateCanonicalEvent } from '../events.mjs'
-import { CAPABILITIES } from '../schema.mjs'
+import { EVENT_TYPES, validateCanonicalEvent } from '../events.mjs'
+import { ACTIVITY, ATTENTION, CAPABILITIES } from '../schema.mjs'
+
+function stateEvent(action, payload) {
+  const now = Date.now()
+  return validateCanonicalEvent({
+    eventId: randomUUID(),
+    eventType: EVENT_TYPES.AGENT_STATE,
+    organizationId: action.payload.organizationId || 'workforceos',
+    agentId: action.agentId,
+    workItemId: action.workItemId || undefined,
+    sourceType: 'workforce-runtime',
+    sourceEventId: `action:${action.idempotencyKey}`,
+    occurredAt: now,
+    receivedAt: now,
+    payload,
+  })
+}
 
 /**
  * Native WorkforceOS adapter for agents that already emit canonical runtime events.
@@ -27,5 +43,24 @@ export default defineAdapter({
       payload: raw?.payload || {},
     }
     return validateCanonicalEvent(event)
+  },
+
+  async executeAction(action) {
+    switch (action.actionType) {
+      case 'inspect':
+        return { ok: true, events: [], result: { inspected: true } }
+      case 'pause':
+        return { ok: true, events: [stateEvent(action, { activity: ACTIVITY.PAUSED })], result: { activity: ACTIVITY.PAUSED } }
+      case 'resume':
+        return { ok: true, events: [stateEvent(action, { activity: ACTIVITY.WORKING })], result: { activity: ACTIVITY.WORKING } }
+      case 'retry':
+        return {
+          ok: true,
+          events: [stateEvent(action, { activity: ACTIVITY.WORKING, attention: ATTENTION.NONE })],
+          result: { retried: true },
+        }
+      default:
+        return { ok: false, error: `unsupported WorkforceOS runtime action: ${action.actionType}` }
+    }
   },
 })
