@@ -82,6 +82,14 @@ function rosterCard(agent) {
   return card
 }
 
+function preservationLabel(asset) {
+  const audit = asset?.preservation
+  if (!audit) return 'Not audited'
+  if (audit.minimumComplete) return 'Minimum standard complete'
+  const missing = Array.isArray(audit.missing) ? audit.missing : []
+  return missing.length ? `Missing: ${missing.join(', ')}` : 'Incomplete'
+}
+
 function assetCard(asset) {
   const card = element('article', 'agent-card')
   const top = element('div', 'agent-card-top')
@@ -94,6 +102,7 @@ function assetCard(asset) {
   const meta = element('dl', 'agent-meta')
   const fields = [
     ['Owner', asset.employeeId || 'Unassigned'],
+    ['Preservation', preservationLabel(asset)],
     ['Version', asset.version || 'Not recorded'],
     ['Last live verification', asset.continuity?.lastLiveVerifiedAt ? new Date(asset.continuity.lastLiveVerifiedAt).toLocaleString() : 'Not verified'],
     ['Last backup', asset.continuity?.lastBackupAt ? new Date(asset.continuity.lastBackupAt).toLocaleString() : 'Not recorded'],
