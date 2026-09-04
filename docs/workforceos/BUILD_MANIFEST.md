@@ -15,13 +15,13 @@ Provide one governed visual and operational Command Center for the AI workforce 
 
 | Layer | Current record | Status |
 | --- | --- | --- |
-| Build / deployment workspace | Replit app `LooseDarkvioletPentagon` — `https://replit.com/@jrhunt177/LooseDarkvioletPentagon` | BUILT / acceptance in progress |
+| Build / deployment workspace | Replit app `LooseDarkvioletPentagon` | BUILT / acceptance in progress |
 | Permanent code source | GitHub `jrhunt177-byte/workforceos-bot-crossing` | CONTROLLING code source |
 | Working implementation branch | `workforceos/phase-1-intake` | TESTED |
 | Pull request | GitHub PR #1 | DRAFT / active |
 | Public deployment URL | Not published | MISSING by design until release gates pass |
-| Cloud employee/campaign folder | Not yet reconciled for this asset | MISSING |
-| Asset Registry record | Registry capability implemented; private source-backed directory loading is in progress | PARTIAL |
+| Cloud business-record root | Google Drive `Hunt Strategic Holdings - AI WorkforceOS` | CREATED / population in progress |
+| Asset Registry record | Registry capability implemented; private source-backed directory active | PARTIAL / reconciliation in progress |
 | Database | Replit-provisioned PostgreSQL, accessed only through deployment environment configuration | CONNECTED / restart recovery proven |
 
 No secret values belong in this document or the public repository.
@@ -41,12 +41,14 @@ No secret values belong in this document or the public repository.
 - Roster entries may expose a safe direct link to the employee's native workspace when that source-backed location is configured.
 - Canonical agent ordering surfaces critical, approval-required, blocked and offline employees before routine activity so operational exceptions cannot be visually buried.
 - An explicit production-release gate is wired into server startup. Development and staged acceptance remain unchanged unless production release is deliberately requested; a production request fails closed if required persistence/security controls are absent.
+- Asset Registry records now calculate the four-layer preservation minimum required by the controlling Source Control standard and expose missing Replit, GitHub and cloud-folder locations without exposing credentials.
+- The Command Center asset view displays each asset's preservation state and an aggregate preservation-complete count.
 
 ## Current verification evidence
 
-At GitHub branch commit `35dd9a0d1916409d70764da9d8c328b5629350f3`:
+GitHub CI remains green after the Phase 10 preservation-audit implementation and Command Center UI additions:
 
-- WorkforceOS CI run #79: PASS.
+- WorkforceOS CI run #87: PASS at commit `75e6b2018f261d9f3710b0689d66a3b48df904d7`.
 - Locked dependency installation: PASS.
 - Dependency audit at the configured high-severity threshold: PASS.
 - WorkforceOS automated test step: PASS.
@@ -56,7 +58,7 @@ At GitHub branch commit `35dd9a0d1916409d70764da9d8c328b5629350f3`:
 
 Hosted Replit acceptance established on 2026-09-04:
 
-- GitHub implementation synchronized into the Replit acceptance workspace while preserving Replit hosting adaptations.
+- GitHub implementation was synchronized through commit `5cab88c9269b94aab8babbeb2f1bcd7251589907` while preserving Replit hosting adaptations.
 - Full hosted test suite passed: 95 passed, 0 failed.
 - Hosted production build passed.
 - PostgreSQL connection reachable.
@@ -65,6 +67,7 @@ Hosted Replit acceptance established on 2026-09-04:
 - Health, canonical snapshot, Command Center and original 3D routes returned HTTP 200.
 - Autonomous operations remained disabled.
 - Read-auth, signed-event enforcement and production-release mode remained deliberately disabled pending the applicable hosted security gates.
+- The branch has advanced beyond that synchronized hosted checkpoint with tested preservation-audit and security-acceptance tooling; another non-destructive source synchronization is required before final acceptance.
 
 ### Restart / recovery proof
 
@@ -81,13 +84,38 @@ A real reversible hosted checkpoint drill passed:
 
 No implementation defect was found during the drill and no database reset or replacement was required.
 
+## Phase 10 continuity progress
+
+The private hosted directory currently represents five verified employees and six source-backed deployed digital assets. No unresolved employee identity has been fabricated.
+
+A Google Drive continuity root has now been created. The AWOS-002 reference employee folder was created with the full controlling nine-folder master structure, plus a dedicated AgencyOS recruiting campaign website folder. Master cloud folders were also created for AWOS-001, AWOS-003, AWOS-004 and AWOS-005; their required subfolder population remains to be completed.
+
+Before those cloud folders were created, the six registered assets reconciled as follows:
+
+- Replit/build workspace identified: 6 / 6.
+- Public deployment URL identified: 6 / 6.
+- GitHub permanent source identified: 0 / 6.
+- Cloud employee/campaign folder identified in Asset Registry: 0 / 6.
+- Backup date recorded: 0 / 6.
+- Live-verification date recorded: 0 / 6.
+
+The next private-directory synchronization should link the newly created cloud folders to the applicable assets. GitHub continuity remains the principal four-layer preservation gap. The connected GitHub account currently exposes only `ai-roundtable` and `workforceos-bot-crossing`; no existing AWOS-001 through AWOS-005 app repositories were found and the current GitHub connector does not expose repository creation.
+
+## Hosted acceptance tooling added
+
+- `accept:hosted` now validates anonymous rejection when read authentication is enabled, role login, HttpOnly/SameSite/Secure cookie behavior, session introspection, tamper rejection, viewer/operator boundaries, Chairman-only approval boundary for operators, logout expiration and the canonical snapshot.
+- `accept:signed-events` provides a non-mutating HMAC acceptance probe that requires signed-event enforcement and verifies invalid-signature rejection, stale-request rejection and a correctly signed request reaching payload validation without applying a runtime event.
+- These tools are intentionally ready before credentials are provisioned; production enforcement remains disabled until the hosted credential gates are satisfied.
+
 ## Security posture
 
 Production-control capabilities are present but deliberately not fully enabled yet.
 
 - No credentials are committed.
 - Hosted read-auth enforcement remains off until viewer/operator/Chairman credential acceptance is completed.
-- Signed-event enforcement remains off until every real remote event producer has a provisioned signing secret and acceptance test.
+- A dedicated WorkforceOS session signing secret and browser role login secrets are not yet provisioned on the hosted target.
+- Machine viewer/control/Chairman credentials are not yet provisioned.
+- Signed-event enforcement remains off until ingestion and event-signing credentials are provisioned and every real remote event producer has an acceptance test.
 - Autonomous operations remain off.
 - The server refuses to start autonomous operations without durable PostgreSQL persistence.
 - `WORKFORCEOS_PRODUCTION_RELEASE=1` invokes the explicit production release gate during server startup so a release candidate fails closed when required configuration is incomplete.
@@ -97,14 +125,15 @@ Production-control capabilities are present but deliberately not fully enabled y
 
 | Gap | Status | Next owner / action |
 | --- | --- | --- |
-| Hosted synchronization to latest GitHub head | IN PROGRESS | Builder — complete latest additive roster-link sync and re-verify |
+| Hosted synchronization to latest GitHub head | REQUIRED | Builder — sync latest additive code/docs while preserving Replit/PostgreSQL adaptations and re-verify |
 | Real restart / checkpoint recovery drill | TESTED / PASS | Preserve evidence; repeat after material persistence changes |
-| Hosted browser role/session acceptance | MISSING | Builder + secure credential provisioning |
-| Signed remote event producer acceptance | MISSING | Builder after producers are identified and provisioned |
-| Real AWOS-001 through current roster reconciliation | PARTIAL | Load only source-backed identities; do not fabricate missing employee records |
-| Employee-owned app/site registry mapping | PARTIAL | Source-backed Replit/deployment locations identified for AWOS-002 through AWOS-005 |
-| Cloud master-folder location for this Command Center | MISSING | Records steward / cloud filing workflow |
-| GitHub mirrors for employee-owned Replit apps | MISSING / PARTIAL | Establish permanent source-control paths under the Source Control Standard |
+| Hosted browser role/session acceptance | MISSING CONFIG | Provision secure credentials, enable staged enforcement, run `accept:hosted` for viewer/operator/Chairman |
+| Signed remote event producer acceptance | MISSING CONFIG | Provision ingestion/signing credentials, identify producers, run non-mutating probe before enforcement rollout |
+| Real AWOS-001 through current roster reconciliation | PARTIAL | Five verified employees loaded; unresolved identities remain intentionally absent |
+| Employee-owned app/site registry mapping | PARTIAL | Six deployed assets identified; cloud-folder links and GitHub source locations remain incomplete |
+| Cloud employee/campaign folders | PARTIAL | AWOS-002 reference structure complete; AWOS-001/003/004/005 master folders created and need subfolder population/registry linking |
+| GitHub mirrors for employee-owned Replit apps | BLOCKED BY CONNECTOR CAPABILITY | No existing repositories found; current connected GitHub toolset does not expose repository creation |
+| Backup/live-verification evidence | MISSING | Record after permanent GitHub/cloud preservation paths are established and verified |
 | Public deployment and mobile acceptance | MISSING | Builder after security/recovery gates |
 | Deployment rollback drill | MISSING | Builder after publish candidate exists |
 | Large 3D bundle optimization | DESIGNED | Defer until after functional acceptance; preserve renderer behavior |
