@@ -25,128 +25,86 @@ Status: **COMPLETE — PASS**.
 
 Goal: define the contracts that make WorkforceOS source-agnostic before changing upstream behavior.
 
-Deliverables:
+Deliverables include the canonical Organization / Floor / Department / Agent / Work Item / Event / Action model, status precedence, adapter/capability contracts, Chairman authority policy, event/heartbeat/audit contracts, migration map and test strategy.
 
-- Canonical Organization / Floor / Department / Agent / Work Item / Event / Action model.
-- Canonical agent status precedence.
-- Adapter interface and capability model.
-- Chairman authority and approval policy contract.
-- Split between authoritative operational state and local visual layout state.
-- Event ingestion contract with idempotency and source identity.
-- Heartbeat / health contract.
-- Audit-event contract.
-- Test strategy and minimum gate.
-- Migration map from current `Thread` data into the canonical model.
+Gate: contracts represent both legacy Claude sessions and non-coding WorkforceOS agents without renderer changes.
 
-Gate: contracts are internally consistent and can represent both the existing Claude Code adapter and non-coding WorkforceOS agents without renderer changes.
+Status: **COMPLETE — PASS**.
 
 ## Phase 3 — Compatibility core and tests
 
 Goal: introduce the new contracts without breaking Bot Crossing.
 
-Deliverables:
-
-- Compatibility mapper from existing Thread objects to canonical Agent snapshots.
-- Pure status-mapping module.
-- Schema validation.
-- Unit tests for status precedence, adapter capability validation, security-sensitive inputs and migration mapping.
-- Existing Claude Code adapter remains functioning through compatibility mode.
+Deliverables include legacy-thread compatibility mapping, pure status logic, schema validation and regression/security tests.
 
 Gate: existing visual behavior remains equivalent on legacy Claude data and tests pass.
+
+Status: **COMPLETE — PASS**.
 
 ## Phase 4 — WorkforceOS ingestion and registry
 
 Goal: make the Command Center observe real WorkforceOS agents, not only local coding sessions.
 
-Deliverables:
-
-- Agent registry.
-- Department/floor registry.
-- Authenticated event-ingestion endpoint.
-- Source adapter SDK contract.
-- Heartbeats, task-state changes, approval requests, failures and completions.
-- Initial non-Claude source adapter.
+Deliverables include agent/department/floor registries, authenticated event ingestion, adapter SDK contract, heartbeats/task/approval/failure/completion events and a non-Claude runtime adapter.
 
 Gate: two different source types appear together through the same canonical snapshot.
+
+Status: **COMPLETE — PASS**.
 
 ## Phase 5 — Command Center UI transformation
 
 Goal: turn the colony into the approved WorkforceOS environment.
 
-Deliverables:
+Deliverables include black/gold/white branding, floors/departments, mobile-responsive navigation, canonical agent cards, Chairman attention queue, executive summary view and the preserved optional 3D world.
 
-- Black / gold / white branding.
-- Floors and departments represented spatially.
-- Mobile responsive iPhone/iPad UI and hamburger navigation.
-- Agent card showing role, assignment, source, status, last heartbeat, department and authority tier.
-- Chairman attention queue.
-- Executive summary view.
-- Existing 3D world remains optional rather than the only navigation method.
+Gate: desktop and mobile can identify active agents and Chairman-attention items without opening source systems.
 
-Gate: desktop and mobile can identify every active agent and every item requiring Chairman attention without opening source systems.
+Status: **CORE COMPLETE — PASS; hosted mobile acceptance remains Phase 9**.
 
 ## Phase 6 — Action and approval plane
 
 Goal: move from observation to governed operation.
 
-Deliverables:
+Deliverables include adapter actions, Chairman approval queue, idempotent action execution, audit log and capability checks.
 
-- Adapter actions: inspect, open workspace, pause, resume, retry, archive, escalate and approved source-specific actions.
-- Chairman approval queue for reserved-authority actions.
-- Idempotent action execution.
-- Action audit log.
-- Permission/capability checks before UI actions are shown.
+Gate: reversible actions execute end-to-end and reserved actions cannot execute without Chairman approval.
 
-Gate: reversible agent actions execute end-to-end and reserved actions cannot execute without approval.
+Status: **CORE COMPLETE — PASS**.
 
 ## Phase 7 — Autonomous scheduling and executive reporting
 
 Goal: support the 99.7% operating model.
 
-Deliverables:
-
-- Schedule/time-gate representation.
-- Worker heartbeat and stale-worker detection.
-- Morning brief / evening summary feeds for the Executive Secretary layer.
-- Exception-only escalation.
-- Project/agent handoff records.
-- Long-running task continuation and retry rules.
+Deliverables include schedules/time gates, stale-worker detection, continuation/retry, morning/evening briefs, exception escalation and handoffs.
 
 Gate: routine operations continue without Chairman intervention and exceptions surface clearly.
+
+Status: **IMPLEMENTATION COMPLETE — automated CI execution still pending**.
 
 ## Phase 8 — Production security, observability and recovery
 
 Goal: make the system safe to rely on.
 
-Deliverables:
-
-- Authentication and role authorization.
-- Secrets management.
-- Rate limiting and signed external events.
-- Structured logs, metrics and health endpoints.
-- Backups and restore drill.
-- Dependency and static-analysis CI.
-- Branch protection / pull-request checks.
-- Deployment rollback.
-- Threat model for connectors/MCP/adapters.
+Implemented deliverables include authentication/roles, secret-safe configuration, rate limiting, signed events, structured logs/metrics/health, threat model, CI definition, versioned operational checkpointing, restore rollback, PostgreSQL migration/store seam, optimistic concurrency and persistence coordination.
 
 Gate: security and recovery checklist passes before production authority is enabled.
+
+Status: **CORE CODE COMPLETE — hosted production gate NOT PASSED**.
+
+Remaining external acceptance: green CI execution, real PostgreSQL save/restart/restore, backup/restore drill, required GitHub checks, hosted HTTPS/session/mobile validation and deployment rollback.
 
 ## Phase 9 — Deployment and operational acceptance
 
 Goal: make WorkforceOS continuously usable.
 
-Deliverables:
+Implemented preparation includes a hosted acceptance probe and production deployment/recovery/rollback runbook.
 
-- Stable hosted Command Center plus privileged local bridge only where local-machine actions are required.
-- Reconnect/restart behavior.
-- Mobile access.
-- Performance/load validation for expected agent population.
-- Operational runbook.
-- Final legacy-code reduction review after behavior is proven.
+Remaining deliverables require a real hosted target: stable Command Center, persistent database connection, reconnect/restart proof, mobile acceptance, performance/load validation and final post-proof legacy reduction review. Privileged local-machine bridge behavior remains local-only until a secure hosted bridge is proven.
 
 Gate: system is operational, recoverable and usable as the primary WorkforceOS Command Center.
 
+Status: **IN PROGRESS — BLOCKED ON HOSTED TARGET AND EXECUTING CI**.
+
 ## Later expansion
 
-After the Command Center is stable, add adapters and views for the broader workforce: executive agents, revenue agents, prospecting, media, SEO, research, TMS monitoring, opportunity scouts and other systems. Adapter expansion must not require rewriting the renderer or the canonical state model.
+After the Command Center is stable, add adapters and views for the broader workforce: executive agents, revenue agents, prospecting, media, SEO, research, TMS monitoring, opportunity scouts and other systems. Adapter expansion must not require rewriting the renderer or canonical state model.
