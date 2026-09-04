@@ -26,12 +26,50 @@ function optionalString(value, label) {
   return value.trim()
 }
 
+function hasText(value) {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
 function validateStatus(value) {
   const status = assertNonEmptyString(value, 'asset.status')
   if (!STATUS_VALUES.has(status)) {
     throw new TypeError(`asset.status must be one of: ${[...STATUS_VALUES].join(', ')}`)
   }
   return status
+}
+
+/**
+ * Tests the minimum four-layer preservation state required by the controlling
+ * WorkforceOS Source Control, Backup & Asset Registry Standard.
+ *
+ * A material digital asset is preservation-complete only when its build/deploy
+ * workspace, GitHub source, cloud business-record folder and Asset Registry
+ * record are all identifiable. This audit records presence only and never
+ * exposes secret values.
+ */
+export function assessAssetPreservation(asset) {
+  assertPlainObject(asset, 'asset')
+  const locations = asset.locations ?? {}
+  assertPlainObject(locations, 'asset.locations')
+
+  const checks = {
+    replitIdentified: hasText(locations.replitProjectName) || hasText(locations.replitProjectUrl),
+    githubIdentified: hasText(locations.githubRepository) || hasText(locations.githubUrl),
+    cloudFolderIdentified: hasText(locations.cloudFolder),
+    assetRegistryRecordCreated: hasText(asset.assetId),
+  }
+
+  const missing = []
+  if (!checks.replitIdentified) missing.push('replit')
+  if (!checks.githubIdentified) missing.push('github')
+  if (!checks.cloudFolderIdentified) missing.push('cloud-folder')
+  if (!checks.assetRegistryRecordCreated) missing.push('asset-registry')
+
+  return {
+    ...checks,
+    minimumComplete: missing.length === 0,
+    missing,
+  }
 }
 
 /**
@@ -92,18 +130,26 @@ export class WorkforceAssetRegistry {
   }
 
   get(assetId) {
-    return clone(this.assets.get(assetId) || null)
+    const asset = this.assets.get(assetId)
+    if (!asset) return null
+    return clone({ ...asset, preservation: assessAssetPreservation(asset) })
   }
 
   list() {
     return [...this.assets.values()]
       .sort((a, b) => String(a.name).localeCompare(String(b.name)))
-      .map(clone)
+      .map((asset) => clone({ ...asset, preservation: assessAssetPreservation(asset) }))
   }
 
   snapshot() {
+    const assets = this.list()
     return {
-      assets: this.list(),
+      assets,
+      preservation: {
+        total: assets.length,
+        complete: assets.filter((asset) => asset.preservation.minimumComplete).length,
+        incomplete: assets.filter((asset) => !asset.preservation.minimumComplete).length,
+      },
       generatedAt: Date.now(),
     }
   }
