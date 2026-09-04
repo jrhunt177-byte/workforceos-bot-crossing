@@ -67,7 +67,7 @@ function handoffRoute(pathname) {
 /**
  * Standalone WorkforceOS API middleware. The legacy Bot Crossing middleware remains separate.
  * Machine ingestion, interactive sessions, role authorization, Chairman decisions, rate limits,
- * and optional signed events all fail closed when their corresponding production control is enabled.
+ * optional signed events and optional durable persistence all fail closed when configured.
  */
 export function createWorkforceApi({
   scanThreads,
@@ -77,6 +77,7 @@ export function createWorkforceApi({
   timeGates = null,
   handoffs = null,
   operationsLoop = null,
+  persistence = null,
   ingestionToken = '',
   viewerToken = '',
   controlToken = '',
@@ -111,6 +112,12 @@ export function createWorkforceApi({
   if (operationsLoop && (typeof operationsLoop.status !== 'function' || typeof operationsLoop.runOnce !== 'function')) {
     throw new TypeError('operationsLoop must implement status() and runOnce()')
   }
+  if (persistence && (
+    typeof persistence.save !== 'function' ||
+    typeof persistence.persistEvent !== 'function' ||
+    typeof persistence.persistAudit !== 'function' ||
+    typeof persistence.health !== 'function'
+  )) throw new TypeError('persistence must implement save(), persistEvent(), persistAudit() and health()')
   if (rateLimiter && typeof rateLimiter.enforce !== 'function') throw new TypeError('rateLimiter must implement enforce()')
   if (metrics && (typeof metrics.record !== 'function' || typeof metrics.snapshot !== 'function')) {
     throw new TypeError('metrics must implement record() and snapshot()')
@@ -142,6 +149,17 @@ export function createWorkforceApi({
       throw err
     }
     return component
+  }
+
+  const persistAuditEvidence = async () => {
+    if (!persistence || !actionEngine?.listAudit) return
+    for (const entry of actionEngine.listAudit()) await persistence.persistAudit(entry)
+  }
+
+  const persistState = async () => {
+    if (!persistence) return null
+    await persistAuditEvidence()
+    return persistence.save()
   }
 
   const combinedSnapshot = async () => buildCombinedSnapshot({
@@ -208,7 +226,9 @@ export function createWorkforceApi({
           })
         }
         const event = runtimeAdapter.normalizeEvent(parseJson(rawBody))
+        if (persistence) await persistence.persistEvent(event)
         const result = registry.ingestEvent(event)
+        if (result.applied) await persistState()
         return respond(result.duplicate ? 200 : 202, {
           ok: true,
           applied: result.applied,
@@ -237,6 +257,7 @@ export function createWorkforceApi({
         const principal = access.requireRole(req, WORKFORCE_ROLE.OPERATOR)
         const body = await readJsonBody(req)
         const result = await requireActionEngine().requestAction({ ...body, requestedBy: principal.actor })
+        await persistState()
         return respond(result.duplicate ? 200 : 202, result)
       }
 
@@ -247,10 +268,12 @@ export function createWorkforceApi({
         const engine = requireActionEngine()
         if (decision.operation === 'approve') {
           const action = await engine.approveAction(decision.actionId, principal.actor)
+          await persistState()
           return respond(200, { ok: true, action })
         }
         const body = await readJsonBody(req)
         const action = engine.rejectAction(decision.actionId, principal.actor, body.reason || '')
+        await persistState()
         return respond(200, { ok: true, action })
       }
 
@@ -277,6 +300,7 @@ export function createWorkforceApi({
         limit('control-write')
         access.requireRole(req, WORKFORCE_ROLE.OPERATOR)
         const gate = requireComponent(timeGates, 'time-gate registry').set(await readJsonBody(req))
+        await persistState()
         return respond(202, { ok: true, gate })
       }
 
@@ -289,6 +313,7 @@ export function createWorkforceApi({
         limit('control-write')
         access.requireRole(req, WORKFORCE_ROLE.OPERATOR)
         const result = requireComponent(handoffs, 'handoff ledger').create(await readJsonBody(req))
+        await persistState()
         return respond(result.duplicate ? 200 : 202, result)
       }
 
@@ -301,6 +326,7 @@ export function createWorkforceApi({
         if (handoffDecision.operation === 'acknowledge') handoff = ledger.acknowledge(handoffDecision.handoffId)
         else if (handoffDecision.operation === 'complete') handoff = ledger.complete(handoffDecision.handoffId)
         else handoff = ledger.cancel(handoffDecision.handoffId)
+        await persistState()
         return respond(200, { ok: true, handoff })
       }
 
@@ -319,6 +345,7 @@ export function createWorkforceApi({
         const result = operationsLoop
           ? await operationsLoop.runOnce({ period: body.period || 'current', maxRetries: body.maxRetries })
           : await requireComponent(coordinator, 'operations coordinator').runCycle({ period: body.period || 'current', maxRetries: body.maxRetries })
+        await persistState()
         return respond(200, { ok: true, result })
       }
 
@@ -329,10 +356,14 @@ export function createWorkforceApi({
 
       if (url.pathname === '/api/workforce/health' && req.method === 'GET') {
         const snapshot = registry.snapshot()
+        const persistenceHealth = persistence
+          ? await persistence.health()
+          : { ok: true, configured: false, loaded: false, version: 0 }
         return respond(200, {
-          ok: true,
+          ok: persistenceHealth.ok !== false,
           eventCount: snapshot.eventCount,
           operations: operationsLoop?.status?.() || null,
+          persistence: persistenceHealth,
           readAuthenticationRequired: requireReadAuth === true,
           signedEventsRequired: requireSignedEvents === true,
           generatedAt: Date.now(),
