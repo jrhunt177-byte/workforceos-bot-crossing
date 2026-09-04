@@ -59,7 +59,7 @@ Deliverables include black/gold/white branding, floors/departments, mobile-respo
 
 Gate: desktop and mobile can identify active agents and Chairman-attention items without opening source systems.
 
-Status: **CORE COMPLETE — PASS; hosted mobile acceptance remains Phase 9**.
+Status: **CORE COMPLETE — PASS; hosted mobile acceptance remains Phase 9/10**.
 
 ## Phase 6 — Action and approval plane
 
@@ -79,7 +79,7 @@ Deliverables include schedules/time gates, stale-worker detection, continuation/
 
 Gate: routine operations continue without Chairman intervention and exceptions surface clearly.
 
-Status: **IMPLEMENTATION COMPLETE — automated CI execution still pending**.
+Status: **COMPLETE — AUTOMATED CI PASS**.
 
 ## Phase 8 — Production security, observability and recovery
 
@@ -89,21 +89,35 @@ Implemented deliverables include authentication/roles, secret-safe configuration
 
 Gate: security and recovery checklist passes before production authority is enabled.
 
-Status: **CORE CODE COMPLETE — hosted production gate NOT PASSED**.
+Status: **CORE CODE COMPLETE — CI PASS; hosted production gate NOT YET PASSED**.
 
-Remaining external acceptance: green CI execution, real PostgreSQL save/restart/restore, backup/restore drill, required GitHub checks, hosted HTTPS/session/mobile validation and deployment rollback.
+Remaining external acceptance: real PostgreSQL save/restart/restore, backup/restore drill, hosted HTTPS/session/mobile validation and deployment rollback. Required GitHub checks remain desirable where repository protection tooling permits them.
 
 ## Phase 9 — Deployment and operational acceptance
 
 Goal: make WorkforceOS continuously usable.
 
-Implemented preparation includes a hosted acceptance probe and production deployment/recovery/rollback runbook.
+Implemented preparation includes a hosted acceptance probe and production deployment/recovery/rollback runbook. A Replit deployment target has now been created and is being assembled from the WorkforceOS branch.
 
-Remaining deliverables require a real hosted target: stable Command Center, persistent database connection, reconnect/restart proof, mobile acceptance, performance/load validation and final post-proof legacy reduction review. Privileged local-machine bridge behavior remains local-only until a secure hosted bridge is proven.
+Remaining deliverables: verify source fidelity, stable Command Center startup, persistent database connection, reconnect/restart proof, mobile acceptance, performance/load validation and final post-proof legacy reduction review. Privileged local-machine bridge behavior remains local-only until a secure hosted bridge is proven.
 
-Gate: system is operational, recoverable and usable as the primary WorkforceOS Command Center.
+Gate: hosted system is operational, recoverable and usable as a WorkforceOS Command Center.
 
-Status: **IN PROGRESS — BLOCKED ON HOSTED TARGET AND EXECUTING CI**.
+Status: **IN PROGRESS — HOSTED TARGET ACQUIRED; BUILD/ACCEPTANCE PENDING**.
+
+## Phase 10 — Real workforce reconciliation and primary operating acceptance
+
+Goal: make the hosted Command Center represent the real governed WorkforceOS workforce and owned digital assets so normal workforce understanding no longer depends on visiting separate employee apps.
+
+Implemented foundation includes an external workforce-directory bootstrap, inspection-safe real-employee registration, a governed Asset Registry, asset continuity metadata and automated tests. Real directory/business data remains outside the public code repository.
+
+Remaining deliverables: reconcile the current AWOS roster against controlling records, load verified employees/departments/reporting relationships, map employee apps/sites/repositories/cloud locations, attach source-backed work/status, complete hosted desktop/mobile/recovery acceptance, and enable autonomous operations only after the production gates pass.
+
+Gate: the current real workforce is represented without fabricated identities; material employee-owned assets have continuity records; live status/assignments are source-backed; Chairman attention contains genuine exceptions; hosted security/persistence/recovery/rollback pass; WorkforceOS can serve as the primary Command Center.
+
+Status: **IN PROGRESS**.
+
+See `PHASE_10_REAL_WORKFORCE_ACCEPTANCE.md`.
 
 ## Later expansion
 
