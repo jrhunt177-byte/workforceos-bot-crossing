@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { apiMiddleware } from './api.mjs'
 import { scanThreads } from './scan.mjs'
 import { createWorkforceApi } from './workforce/http.mjs'
-import { workforceRegistry } from './workforce/runtime.mjs'
+import { workforceActionEngine, workforceRegistry } from './workforce/runtime.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(here, '..', 'dist')
@@ -14,7 +14,10 @@ const HOST = process.env.BOT_CROSSING_HOST || '127.0.0.1'
 const workforceApi = createWorkforceApi({
   scanThreads,
   registry: workforceRegistry,
+  actionEngine: workforceActionEngine,
   ingestionToken: process.env.WORKFORCEOS_INGEST_TOKEN || '',
+  controlToken: process.env.WORKFORCEOS_CONTROL_TOKEN || '',
+  chairmanToken: process.env.WORKFORCEOS_CHAIRMAN_TOKEN || '',
 })
 
 const TYPES = {
