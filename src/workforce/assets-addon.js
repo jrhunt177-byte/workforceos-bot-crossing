@@ -1,5 +1,5 @@
 import { fetchWorkforceSnapshot } from './api.js'
-import { sortAssets, statusLabel } from './view-model.js'
+import { sortAgents, sortAssets, statusLabel } from './view-model.js'
 
 function element(tag, className, text) {
   const node = document.createElement(tag)
@@ -26,6 +26,39 @@ function externalLink(label, value) {
   link.target = '_blank'
   link.rel = 'noopener noreferrer'
   return link
+}
+
+function employeeLabel(agent) {
+  if (agent.agentNumber == null || agent.agentNumber === '') return 'Workforce employee'
+  const raw = String(agent.agentNumber)
+  if (/^AWOS-/i.test(raw)) return raw.toUpperCase()
+  return `AWOS-${raw.padStart(3, '0')}`
+}
+
+function rosterCard(agent) {
+  const card = element('article', 'agent-card')
+  const top = element('div', 'agent-card-top')
+  const identity = element('div', 'agent-identity')
+  identity.append(element('p', 'eyebrow', employeeLabel(agent)))
+  identity.append(element('h3', '', agent.name || 'Unnamed employee'))
+  identity.append(element('p', '', agent.role || 'WorkforceOS employee'))
+  const state = element('span', `status status-${agent.visibleStatus || 'unknown'}`, statusLabel(agent.visibleStatus || 'unknown'))
+  top.append(identity, state)
+
+  const meta = element('dl', 'agent-meta')
+  const fields = [
+    ['Department', agent.departmentId || 'Unassigned'],
+    ['Authority', statusLabel(agent.authorityTier || 'unknown')],
+    ['Source', agent.sourceType || 'unknown'],
+    ['Activity', statusLabel(agent.activity || 'unknown')],
+    ['Attention', statusLabel(agent.attention || 'none')],
+    ['Heartbeat', agent.lastHeartbeatAt ? new Date(agent.lastHeartbeatAt).toLocaleString() : 'Not reported'],
+  ]
+  for (const [label, value] of fields) {
+    meta.append(element('dt', '', label), element('dd', '', value))
+  }
+  card.append(top, meta)
+  return card
 }
 
 function assetCard(asset) {
@@ -62,6 +95,22 @@ function assetCard(asset) {
   return card
 }
 
+function renderRoster(overlay, snapshot) {
+  const agents = sortAgents(snapshot?.agents || [])
+  const panel = element('section', 'panel')
+  const heading = element('div', 'panel-heading')
+  const left = element('div')
+  left.append(element('p', 'eyebrow', 'Governed workforce'), element('h2', '', 'Employee Roster'))
+  heading.append(left, element('span', 'panel-count', `${agents.length} represented`))
+  panel.append(heading)
+
+  const grid = element('div', 'agent-grid')
+  agents.forEach((agent) => grid.append(rosterCard(agent)))
+  if (!agents.length) grid.append(element('p', 'empty-state', 'No governed employees are represented yet.'))
+  panel.append(grid)
+  overlay.replaceChildren(panel)
+}
+
 function renderAssetRegistry(overlay, snapshot) {
   const assets = sortAssets(snapshot?.assets || [])
   const panel = element('section', 'panel')
@@ -73,26 +122,27 @@ function renderAssetRegistry(overlay, snapshot) {
 
   const grid = element('div', 'agent-grid')
   assets.forEach((asset) => grid.append(assetCard(asset)))
-  if (!assets.length) {
-    grid.append(element('p', 'empty-state', 'No governed digital assets are registered yet.'))
-  }
+  if (!assets.length) grid.append(element('p', 'empty-state', 'No governed digital assets are registered yet.'))
   panel.append(grid)
   overlay.replaceChildren(panel)
 }
 
-async function refreshAssetRegistry(overlay) {
-  overlay.replaceChildren(element('p', 'empty-state', 'Loading governed assets…'))
+async function refreshOverlay(overlay, mode) {
+  overlay.replaceChildren(element('p', 'empty-state', mode === 'roster' ? 'Loading governed workforce…' : 'Loading governed assets…'))
   try {
-    renderAssetRegistry(overlay, await fetchWorkforceSnapshot())
+    const snapshot = await fetchWorkforceSnapshot()
+    if (mode === 'roster') renderRoster(overlay, snapshot)
+    else renderAssetRegistry(overlay, snapshot)
   } catch (error) {
+    const subject = mode === 'roster' ? 'Employee Roster' : 'Asset Registry'
     const message = error?.status === 401
-      ? 'Sign in to WorkforceOS before opening the Asset Registry.'
-      : `Asset Registry is unavailable: ${error?.message || 'unknown error'}`
+      ? `Sign in to WorkforceOS before opening the ${subject}.`
+      : `${subject} is unavailable: ${error?.message || 'unknown error'}`
     overlay.replaceChildren(element('p', 'empty-state error-state', message))
   }
 }
 
-function installAssetRegistry() {
+function installGovernedViews() {
   const app = document.querySelector('#workforce-app')
   const sidebar = app?.querySelector('[data-sidebar]')
   const content = app?.querySelector('.content')
@@ -100,38 +150,49 @@ function installAssetRegistry() {
   if (!app || !sidebar || !content || !mainContainer) return false
   if (sidebar.querySelector('[data-workforce-assets]')) return true
 
-  const button = element('button', 'nav-item', 'Assets')
-  button.type = 'button'
-  button.dataset.workforceAssets = 'true'
+  const rosterButton = element('button', 'nav-item', 'Roster')
+  rosterButton.type = 'button'
+  rosterButton.dataset.workforceRoster = 'true'
+  const assetsButton = element('button', 'nav-item', 'Assets')
+  assetsButton.type = 'button'
+  assetsButton.dataset.workforceAssets = 'true'
 
   const worldLink = sidebar.querySelector('a.nav-item')
-  if (worldLink) sidebar.insertBefore(button, worldLink)
-  else sidebar.append(button)
+  if (worldLink) {
+    sidebar.insertBefore(rosterButton, worldLink)
+    sidebar.insertBefore(assetsButton, worldLink)
+  } else {
+    sidebar.append(rosterButton, assetsButton)
+  }
 
   const overlay = element('div', '')
   overlay.hidden = true
-  overlay.dataset.workforceAssetsView = 'true'
+  overlay.dataset.workforceGovernedView = 'true'
   content.append(overlay)
 
-  button.addEventListener('click', async () => {
+  const show = async (button, mode) => {
     app.querySelectorAll('.nav-item').forEach((item) => item.classList.toggle('is-active', item === button))
     mainContainer.hidden = true
     overlay.hidden = false
     sidebar.classList.remove('is-open')
-    await refreshAssetRegistry(overlay)
-  })
+    await refreshOverlay(overlay, mode)
+  }
+
+  rosterButton.addEventListener('click', () => show(rosterButton, 'roster'))
+  assetsButton.addEventListener('click', () => show(assetsButton, 'assets'))
 
   for (const item of app.querySelectorAll('[data-view]')) {
     item.addEventListener('click', () => {
       overlay.hidden = true
       mainContainer.hidden = false
-      button.classList.remove('is-active')
+      rosterButton.classList.remove('is-active')
+      assetsButton.classList.remove('is-active')
     })
   }
 
   return true
 }
 
-if (!installAssetRegistry()) {
-  window.addEventListener('DOMContentLoaded', installAssetRegistry, { once: true })
+if (!installGovernedViews()) {
+  window.addEventListener('DOMContentLoaded', installGovernedViews, { once: true })
 }
