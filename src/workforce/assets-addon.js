@@ -28,6 +28,20 @@ function externalLink(label, value) {
   return link
 }
 
+function agentWorkspaceUrl(agent) {
+  const ref = agent?.sourceRef
+  if (typeof ref === 'string') return safeExternalUrl(ref)
+  if (!ref || typeof ref !== 'object') return null
+  return safeExternalUrl(
+    ref.url ||
+    ref.href ||
+    ref.workspaceUrl ||
+    ref.replitProjectUrl ||
+    ref.nativeUrl ||
+    '',
+  )
+}
+
 function employeeLabel(agent) {
   if (agent.agentNumber == null || agent.agentNumber === '') return 'Workforce employee'
   const raw = String(agent.agentNumber)
@@ -57,7 +71,14 @@ function rosterCard(agent) {
   for (const [label, value] of fields) {
     meta.append(element('dt', '', label), element('dd', '', value))
   }
+
+  const workspace = agentWorkspaceUrl(agent)
   card.append(top, meta)
+  if (workspace) {
+    const links = element('div', 'agent-meta')
+    links.append(externalLink('Open employee workspace', workspace))
+    card.append(links)
+  }
   return card
 }
 
