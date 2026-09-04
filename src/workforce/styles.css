@@ -18,7 +18,7 @@
 * { box-sizing: border-box; }
 html, body, #workforce-app { margin: 0; min-height: 100%; }
 body { min-width: 320px; background: radial-gradient(circle at 70% 0%, #211c0d 0, #0b0b0b 28rem, var(--bg) 62rem); }
-button, a { font: inherit; }
+button, a, input, select { font: inherit; }
 button { color: inherit; }
 
 .topbar {
@@ -36,6 +36,9 @@ button { color: inherit; }
 .connection.is-online > span { background: var(--ok); }
 .connection.is-loading > span { background: var(--gold); }
 .connection.is-error > span { background: var(--danger); }
+.session-button { padding: 8px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: var(--muted); cursor: pointer; font-size: 11px; }
+.session-button:hover { border-color: #4b4328; color: #fff; }
+.session-button:disabled { cursor: wait; opacity: .55; }
 
 .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: calc(100vh - 72px); }
 .sidebar { position: sticky; top: 72px; height: calc(100vh - 72px); padding: 24px 16px; border-right: 1px solid var(--line); background: rgba(8,8,8,.82); }
@@ -81,6 +84,20 @@ button { color: inherit; }
 .empty-state { margin: 0; padding: 28px 8px; color: var(--muted); text-align: center; }
 .error-state { color: #efaaaa; }
 
+.login-panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 460px); gap: clamp(24px, 7vw, 96px); align-items: center; min-height: 440px; padding: clamp(28px, 5vw, 64px); border: 1px solid var(--line); border-radius: 20px; background: linear-gradient(135deg, rgba(27,24,14,.96), rgba(11,11,11,.98) 50%); box-shadow: 0 28px 90px rgba(0,0,0,.3); }
+.login-copy h2 { max-width: 620px; margin: 8px 0 14px; color: #fff; font-size: clamp(28px, 4vw, 46px); letter-spacing: -.035em; }
+.login-note { max-width: 620px; margin: 0; color: var(--muted); line-height: 1.65; }
+.login-form { display: grid; gap: 16px; padding: 22px; border: 1px solid #29271f; border-radius: 16px; background: rgba(5,5,5,.62); }
+.form-field { display: grid; gap: 8px; }
+.form-field > span { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+.form-field input, .form-field select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #333; border-radius: 9px; outline: none; background: #0c0c0c; color: #fff; }
+.form-field input:focus, .form-field select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,175,55,.1); }
+.login-feedback { min-height: 18px; margin: -2px 0 0; color: var(--muted); font-size: 12px; }
+.login-feedback.is-error { color: #efaaaa; }
+.login-submit { min-height: 46px; border: 1px solid #9d8128; border-radius: 9px; background: linear-gradient(180deg, #e0bd49, #b89428); color: #090909; cursor: pointer; font-weight: 900; letter-spacing: .03em; }
+.login-submit:hover { filter: brightness(1.06); }
+.login-submit:disabled { cursor: wait; opacity: .6; }
+
 .floor-stack { display: grid; gap: 18px; }
 .floor-card { padding: 20px; border-radius: 18px; }
 .floor-heading { align-items: center; justify-content: flex-start; margin-bottom: 18px; }
@@ -95,11 +112,12 @@ button { color: inherit; }
 }
 
 @media (max-width: 760px) {
-  .topbar { height: 64px; padding: 0 14px; }
+  .topbar { height: 64px; padding: 0 14px; gap: 10px; }
   .menu-button { display: block; }
   .brand-block { min-width: 0; }
   .brand-block div > span { display: none; }
   .connection b { display: none; }
+  .session-button { max-width: 106px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .shell { display: block; min-height: calc(100vh - 64px); }
   .sidebar { position: fixed; top: 64px; left: 0; z-index: 15; width: min(82vw, 300px); height: calc(100vh - 64px); transform: translateX(-105%); transition: transform .2s ease; box-shadow: 20px 0 60px rgba(0,0,0,.4); }
   .sidebar.is-open { transform: translateX(0); }
@@ -109,11 +127,14 @@ button { color: inherit; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .agent-grid, .agent-grid.compact { grid-template-columns: 1fr; }
   .panel, .floor-card { padding: 16px; }
+  .login-panel { grid-template-columns: 1fr; min-height: 0; padding: 24px 16px; }
 }
 
 @media (max-width: 430px) {
+  .brand-block strong { font-size: 14px; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .stat-card { min-height: 112px; padding: 14px; }
   .stat-value { font-size: 30px; }
   .agent-card-top { flex-direction: column; }
+  .session-button { max-width: 80px; padding-inline: 8px; }
 }
