@@ -190,7 +190,7 @@ test('Chairman-gated action remains pending until separate Chairman credential a
       method: 'POST',
       headers: jsonHeaders('control-secret'),
     })
-    assert.equal(denied.status, 401)
+    assert.equal(denied.status, 403)
     assert.equal(registry.snapshot().agents[0].activity, ACTIVITY.WORKING)
 
     const approved = await fetch(`${base}/api/workforce/actions/${created.action.actionId}/approve`, {
