@@ -50,6 +50,11 @@ export function createAccessController({
   }
 
   function login(role, suppliedSecret) {
+    if (typeof sessionSecret !== 'string' || sessionSecret.length < 32) {
+      const err = new Error('WorkforceOS browser session authentication is not configured')
+      err.statusCode = 503
+      throw err
+    }
     if (!verifyLoginSecret(role, suppliedSecret, loginSecrets)) {
       const err = new Error('Invalid WorkforceOS login')
       err.statusCode = 401
