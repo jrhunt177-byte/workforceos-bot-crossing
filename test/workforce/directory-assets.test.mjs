@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ASSET_STATUS, WorkforceAssetRegistry } from '../../server/workforce/asset-registry.mjs'
+import {
+  ASSET_STATUS,
+  WorkforceAssetRegistry,
+  assessAssetPreservation,
+} from '../../server/workforce/asset-registry.mjs'
 import { applyWorkforceDirectory, parseWorkforceDirectory } from '../../server/workforce/directory.mjs'
 import { WorkforceRegistry } from '../../server/workforce/registry.mjs'
 
@@ -58,6 +62,8 @@ test('directory bootstrap registers agent identity and assets together', () => {
   assert.equal(snapshot.assets.length, 1)
   assert.equal(snapshot.assets[0].employeeId, 'awos-test')
   assert.equal(snapshot.assets[0].status, ASSET_STATUS.TESTED)
+  assert.equal(snapshot.assets[0].preservation.minimumComplete, false)
+  assert.deepEqual(snapshot.assets[0].preservation.missing, ['replit', 'cloud-folder'])
 })
 
 test('asset registry updates continuity records without dropping known locations', () => {
@@ -82,6 +88,55 @@ test('asset registry updates continuity records without dropping known locations
   assert.equal(asset.locations.githubRepository, 'example/workforceos')
   assert.equal(asset.continuity.lastBackupAt, 1234)
   assert.equal(asset.continuity.nextAction, 'Publish after acceptance')
+  assert.deepEqual(asset.preservation.missing, ['replit', 'cloud-folder'])
+})
+
+test('asset preservation audit implements the four-layer minimum completion standard', () => {
+  const incomplete = assessAssetPreservation({
+    assetId: 'app-incomplete',
+    locations: { githubRepository: 'example/repo' },
+  })
+  assert.equal(incomplete.minimumComplete, false)
+  assert.deepEqual(incomplete.missing, ['replit', 'cloud-folder'])
+
+  const complete = assessAssetPreservation({
+    assetId: 'app-complete',
+    locations: {
+      replitProjectName: 'Workforce Console',
+      githubRepository: 'example/workforce-console',
+      cloudFolder: 'Company/AI WorkforceOS/Employee 002',
+    },
+  })
+  assert.equal(complete.minimumComplete, true)
+  assert.deepEqual(complete.missing, [])
+  assert.equal(complete.replitIdentified, true)
+  assert.equal(complete.githubIdentified, true)
+  assert.equal(complete.cloudFolderIdentified, true)
+  assert.equal(complete.assetRegistryRecordCreated, true)
+})
+
+test('asset registry snapshot summarizes preservation completeness without exposing secrets', () => {
+  const registry = new WorkforceAssetRegistry()
+  registry.register({
+    assetId: 'complete',
+    name: 'Complete Asset',
+    assetType: 'app',
+    status: ASSET_STATUS.TESTED,
+    locations: {
+      replitProjectUrl: 'https://example.invalid/replit',
+      githubUrl: 'https://example.invalid/github',
+      cloudFolder: 'Company/Employee 002',
+    },
+  })
+  registry.register({
+    assetId: 'incomplete',
+    name: 'Incomplete Asset',
+    assetType: 'site',
+    status: ASSET_STATUS.DEPLOYED,
+  })
+
+  const snapshot = registry.snapshot()
+  assert.deepEqual(snapshot.preservation, { total: 2, complete: 1, incomplete: 1 })
 })
 
 test('asset registry rejects unrecognized lifecycle states', () => {
