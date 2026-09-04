@@ -2,7 +2,9 @@ import { WorkforceActionEngine } from './action-engine.mjs'
 import runtimeAdapter from './adapters/workforce-runtime.mjs'
 import { OperationsCoordinator } from './coordinator.mjs'
 import { HandoffLedger } from './handoffs.mjs'
+import { WorkforceMetrics, createStructuredLogger } from './observability.mjs'
 import { OperationsLoop } from './operations-loop.mjs'
+import { WorkforceRateLimiter } from './rate-limit.mjs'
 import { WorkforceRegistry } from './registry.mjs'
 import { TimeGateRegistry } from './scheduling.mjs'
 
@@ -40,3 +42,9 @@ export const workforceOperationsLoop = new OperationsLoop({
   coordinator: workforceCoordinator,
   intervalMs: 60_000,
 })
+export const workforceRateLimiter = new WorkforceRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 120,
+})
+export const workforceMetrics = new WorkforceMetrics()
+export const workforceLogger = createStructuredLogger()
