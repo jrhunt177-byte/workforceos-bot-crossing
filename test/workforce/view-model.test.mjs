@@ -1,8 +1,8 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { groupAgentsByFloor, sortAgents, summarizeSnapshot } from '../../src/workforce/view-model.js'
+import { groupAgentsByFloor, sortAgents, sortAssets, summarizeSnapshot } from '../../src/workforce/view-model.js'
 
-test('executive summary counts operational signals', () => {
+test('executive summary counts operational signals and owned assets', () => {
   const summary = summarizeSnapshot({
     agents: [
       { visibleStatus: 'working', sourceType: 'claude-code', health: 'healthy' },
@@ -10,8 +10,22 @@ test('executive summary counts operational signals', () => {
       { visibleStatus: 'offline', sourceType: 'workforce-runtime', health: 'offline' },
     ],
     attention: [{ agentId: 'a' }],
+    assets: [
+      { assetId: 'a1', status: 'OPERATIONAL' },
+      { assetId: 'a2', status: 'DEPLOYED' },
+      { assetId: 'a3', status: 'BUILT' },
+    ],
   })
-  assert.deepEqual(summary, { totalAgents: 3, working: 1, reviewReady: 1, attention: 1, offline: 1, sources: 2 })
+  assert.deepEqual(summary, {
+    totalAgents: 3,
+    working: 1,
+    reviewReady: 1,
+    attention: 1,
+    offline: 1,
+    sources: 2,
+    assets: 3,
+    operationalAssets: 2,
+  })
 })
 
 test('attention-worthy agents sort before routine workers', () => {
@@ -21,6 +35,15 @@ test('attention-worthy agents sort before routine workers', () => {
     { name: 'Critical', visibleStatus: 'critical' },
   ])
   assert.deepEqual(sorted.map((agent) => agent.name), ['Critical', 'Blocked', 'Idle'])
+})
+
+test('assets prioritize blocked and incomplete records before routine operational assets', () => {
+  const sorted = sortAssets([
+    { name: 'Operational', status: 'OPERATIONAL' },
+    { name: 'Built', status: 'BUILT' },
+    { name: 'Blocked', status: 'BLOCKED' },
+  ])
+  assert.deepEqual(sorted.map((asset) => asset.name), ['Blocked', 'Operational', 'Built'])
 })
 
 test('floor hierarchy groups agents through departments', () => {
