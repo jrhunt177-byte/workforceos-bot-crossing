@@ -4,8 +4,12 @@ import http from 'node:http'
 import { once } from 'node:events'
 import runtimeAdapter from '../../server/workforce/adapters/workforce-runtime.mjs'
 import { WorkforceActionEngine, ACTION_EXECUTION_STATE } from '../../server/workforce/action-engine.mjs'
+import { OperationsCoordinator } from '../../server/workforce/coordinator.mjs'
+import { HandoffLedger } from '../../server/workforce/handoffs.mjs'
 import { createWorkforceApi } from '../../server/workforce/http.mjs'
+import { OperationsLoop } from '../../server/workforce/operations-loop.mjs'
 import { WorkforceRegistry } from '../../server/workforce/registry.mjs'
+import { TimeGateRegistry } from '../../server/workforce/scheduling.mjs'
 import { EVENT_TYPES } from '../../server/workforce/events.mjs'
 import { ACTIVITY, ATTENTION, AUTHORITY, HEALTH } from '../../server/workforce/schema.mjs'
 
@@ -25,6 +29,7 @@ function seededRegistry() {
     health: HEALTH.HEALTHY,
     activity: ACTIVITY.IDLE,
     attention: ATTENTION.NONE,
+    lastHeartbeatAt: Date.now(),
   })
   return registry
 }
@@ -32,6 +37,10 @@ function seededRegistry() {
 async function withServer(fn) {
   const registry = seededRegistry()
   const actionEngine = new WorkforceActionEngine({ registry, adapters: [runtimeAdapter] })
+  const timeGates = new TimeGateRegistry()
+  const handoffs = new HandoffLedger()
+  const coordinator = new OperationsCoordinator({ registry, actionEngine, timeGates, handoffs })
+  const operationsLoop = new OperationsLoop({ coordinator, intervalMs: 60_000 })
   const scanThreads = async () => [{
     id: 'legacy-one',
     harness: 'claude-code',
@@ -50,6 +59,10 @@ async function withServer(fn) {
     scanThreads,
     registry,
     actionEngine,
+    coordinator,
+    timeGates,
+    handoffs,
+    operationsLoop,
     ingestionToken: 'test-secret',
     controlToken: 'control-secret',
     chairmanToken: 'chairman-secret',
@@ -59,8 +72,9 @@ async function withServer(fn) {
   await once(server, 'listening')
   const { port } = server.address()
   try {
-    await fn(`http://127.0.0.1:${port}`, registry, actionEngine)
+    await fn(`http://127.0.0.1:${port}`, registry, actionEngine, { timeGates, handoffs, coordinator, operationsLoop })
   } finally {
+    operationsLoop.stop()
     server.close()
     await once(server, 'close')
   }
@@ -201,5 +215,72 @@ test('action audit endpoint is protected and records execution', async () => {
     })
     assert.equal(res.status, 200)
     assert.deepEqual((await res.json()).audit.map((entry) => entry.event), ['requested', 'executed'])
+  })
+})
+
+test('Phase 7 operational reads are protected by the control credential', async () => {
+  await withServer(async (base) => {
+    for (const path of ['brief?period=morning', 'schedules', 'handoffs', 'operations']) {
+      const denied = await fetch(`${base}/api/workforce/${path}`)
+      assert.equal(denied.status, 401)
+      const allowed = await fetch(`${base}/api/workforce/${path}`, {
+        headers: { Authorization: 'Bearer control-secret' },
+      })
+      assert.equal(allowed.status, 200)
+    }
+  })
+})
+
+test('schedule and handoff records can be created through the governed control plane', async () => {
+  await withServer(async (base, _registry, _engine, services) => {
+    const now = Date.now()
+    const schedule = await fetch(`${base}/api/workforce/schedules`, {
+      method: 'POST',
+      headers: jsonHeaders('control-secret'),
+      body: JSON.stringify({
+        gateId: 'http-gate',
+        agentId: 'runtime-agent',
+        eligibleAfter: now + 60_000,
+        eligibleBefore: now + 120_000,
+        reason: 'Scheduled continuation',
+      }),
+    })
+    assert.equal(schedule.status, 202)
+    assert.equal(services.timeGates.list().length, 1)
+
+    const handoff = await fetch(`${base}/api/workforce/handoffs`, {
+      method: 'POST',
+      headers: jsonHeaders('control-secret'),
+      body: JSON.stringify({
+        idempotencyKey: 'http-handoff',
+        fromAgentId: 'runtime-agent',
+        toAgentId: 'executive-secretary',
+        summary: 'Carry the current checkpoint forward',
+        context: { checkpoint: 'phase-7' },
+      }),
+    })
+    assert.equal(handoff.status, 202)
+    assert.equal(services.handoffs.pending().length, 1)
+  })
+})
+
+test('manual operations cycle is control-protected and returns an executive brief', async () => {
+  await withServer(async (base) => {
+    const denied = await fetch(`${base}/api/workforce/operations/run`, {
+      method: 'POST',
+      headers: jsonHeaders(),
+      body: JSON.stringify({ period: 'evening' }),
+    })
+    assert.equal(denied.status, 401)
+
+    const res = await fetch(`${base}/api/workforce/operations/run`, {
+      method: 'POST',
+      headers: jsonHeaders('control-secret'),
+      body: JSON.stringify({ period: 'evening', maxRetries: 2 }),
+    })
+    assert.equal(res.status, 200)
+    const body = await res.json()
+    assert.equal(body.ok, true)
+    assert.equal(body.result.brief.period, 'evening')
   })
 })
