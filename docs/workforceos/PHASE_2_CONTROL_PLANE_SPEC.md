@@ -1,6 +1,6 @@
 # WorkforceOS Command Center — Phase 2 Control-Plane Specification
 
-Status: **DESIGN COMPLETE — implementation not yet applied to existing code**
+Status: **DESIGN COMPLETE — core contracts implemented through Phase 6; production persistence/authentication remain later gates**
 
 Purpose: define a source-agnostic operational contract so the existing renderer can become a WorkforceOS view without coupling the system to Claude Code, GitHub, Replit, ChatGPT, or any future single provider.
 
@@ -155,12 +155,14 @@ The 3D world and the 2D dashboard consume one derived function:
 1. `critical`
 2. `approval_required`
 3. `blocked`
-4. `working`
-5. `review_ready`
-6. `scheduled`
-7. `paused`
-8. `idle`
-9. `offline`
+4. `offline`
+5. `working`
+6. `review_ready`
+7. `scheduled`
+8. `paused`
+9. `idle`
+
+`offline` sits above activity because heartbeat/source health must not be hidden behind stale activity. A healthy time-gated worker remains `scheduled`; an expired/unavailable source becomes visibly `offline` without being promoted to `critical`.
 
 The same function must feed every display. A robot may never wave while a side panel says it is merely idle.
 
@@ -314,8 +316,11 @@ Initial logical endpoints:
 - `GET /api/workforce/agents/:id`
 - `GET /api/workforce/attention`
 - `POST /api/workforce/events`
+- `GET /api/workforce/actions`
 - `POST /api/workforce/actions`
+- `GET /api/workforce/approvals`
 - `POST /api/workforce/actions/:id/approve`
+- `POST /api/workforce/actions/:id/reject`
 - `GET /api/workforce/audit`
 
 The existing `/api/threads` endpoint remains during compatibility mode.
@@ -352,4 +357,4 @@ Minimum automated coverage:
 
 **PHASE 2 DESIGN PASSES.**
 
-Implementation should begin by adding new compatibility modules and tests alongside existing code rather than rewriting `server/scan.mjs`, `server/api.mjs`, or `src/game/colony.js` in place. This keeps the approved upstream behavior intact until the new path proves equivalent.
+Implementation began additively beside the legacy path. Existing Claude scanning and 3D behavior remain available while the canonical WorkforceOS path is proven layer by layer.
